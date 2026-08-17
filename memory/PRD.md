@@ -25,6 +25,7 @@ Build a premium, low-friction attendance companion that makes it immediately obv
 - Replaced starter screen with Pulse dashboard, hero readiness indicator, IST date, punch cards, status pills, and summary cards.
 - Added Supabase client configuration, punch data layer, AsyncStorage persistence, and remote/local merge behavior for reliable reloads.
 - Added edit time modal, delete confirmation, history view with YYYY-MM filter, settings modal, reminder preferences, and notification toggle.
+- Replaced the separate history entry list with a month calendar view, previous/next month navigation, and morning/evening status dots per day.
 - Added SQL schema with unique session constraint and RLS policy for the selected no-auth personal demo mode.
 - Verified Expo preview load, morning punch, history, settings, notification selector, and punch persistence after reload; JavaScript lint is clean.
 
