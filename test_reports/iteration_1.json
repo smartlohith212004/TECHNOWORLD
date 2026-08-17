@@ -1,0 +1,22 @@
+{
+  "summary": "Frontend mobile preview loaded and core dashboard, timezone labels, punch creation, duplicate UI prevention, edit flow, and history filtering were exercised. A reload revealed that saved local punches disappear when Supabase returns an empty successful result.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Reload / persistent local storage", "issue": "After punches were saved locally, a reload showed both sessions as unpunched because getPunches() returns successful Supabase [] instead of merging/falling back to AsyncStorage. This occurs when the remote table is empty or the configured client can read no rows.", "affected_testIDs": ["morning-punch-button", "evening-punch-button", "morning-edit", "evening-edit"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_1.json", "/app/frontend/app/index.tsx", "/app/frontend/src/attendance.ts"],
+  "action_items": ["Fix getPunches persistence strategy: when Supabase succeeds with no rows, preserve/use local AsyncStorage data (and consider merging remote and local records). Re-test reload, edit, and delete flows.", "Avoid relying on raw input[type=checkbox] interaction for the Switch; expose a dedicated testID if deterministic notification-toggle testing is required."],
+  "critical_code_review_comments": ["Supabase successful empty reads overwrite valid local state, violating the requested persistent offline/local fallback behavior.", "Settings reminder times accept arbitrary strings without validation, so malformed times can be saved and displayed."],
+  "updated_files": ["/app/test_reports/iteration_1.json"],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "75%"},
+  "seed_data_creation": "Created only test punches/settings through the UI; no seed data was added.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Preview URL was https://attendance-pulse-54.preview.emergentagent.com. First run created morning/evening punches and edited morning to 08:15 (displayed as 8:15 am). On a subsequent reload, both punches were gone while Supabase was configured. History filter empty state passed. Settings modal opened, but notification Switch's underlying checkbox was outside viewport for direct automation.",
+  "rca_of_issue": "attendance.ts getPunches() catches only request errors. A successful Supabase select returning [] is treated as authoritative and returned directly, unlike savePunch which writes AsyncStorage first. Therefore local records are discarded on the next app initialization whenever the remote table has no visible rows. Mitigation: read local records and merge them with remote data, or use local data when remote is empty; reconcile uploads separately. No APIs were mocked."
+}

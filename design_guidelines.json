@@ -1,0 +1,46 @@
+{
+  "app_name": "PulseBiometric Attendance Tracker",
+  "archetype": "THE PERFORMANCE PRO / SWISS HIGH-CONTRAST",
+  "typography": {
+    "heading_font": "Plus Jakarta Sans / Inter",
+    "body_font": "Inter",
+    "hierarchy": {
+      "H1": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight",
+      "H2": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "H3": "text-xl sm:text-2xl font-semibold",
+      "body": "text-base font-normal leading-relaxed",
+      "label": "text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+    }
+  },
+  "colors": {
+    "primary": "#0F172A",
+    "accent": "#2563EB",
+    "success": "#16A34A",
+    "warning": "#CA8A04",
+    "destructive": "#DC2626",
+    "background": "#F8FAFC",
+    "surface": "#FFFFFF",
+    "border": "#E2E8F0"
+  },
+  "visual_enhancers": {
+    "card_radius": "rounded-2xl",
+    "shadows": "shadow-sm hover:shadow-md transition-shadow duration-200",
+    "borders": "border border-slate-200"
+  },
+  "component_path": "/app/frontend/src/components/",
+  "instructions_to_main_agent": "Implement a fully robust biometric attendance tracker in React Native / Expo web featuring: 1) Daily punch dashboard with Morning & Evening sessions in Asia/Kolkata time; 2) Prominent Punch controls with duplicate and conflict prevention; 3) Edit and Delete entry modals with exact time picker; 4) Configurable reminders and web browser notifications; 5) Attendance History with date/month filters and missed-punch view; 6) Weekly/Monthly summary statistics, complete days, missed punches count, and attendance percentage charts; 7) Full Supabase integration and offline fallback storage support. Ensure every interactive element includes data-testid attributes.",
+  "image_urls": [
+    {
+      "category": "hero_biometric",
+      "description": "Minimal biometric scanner aesthetic",
+      "image_url": "https://images.unsplash.com/photo-1585079374502-415f8516dcc3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTJ8MHwxfHNlYXJjaHwxfHxiaW9tZXRyaWMlMjBhdHRlbmRhbmNlJTIwZmluZ2VycHJpbnQlMjBzY2FubmVyJTIwYWJzdHJhY3QlMjBtaW5pbWFsfGVufDB8fHx8MTc4Njk3MjUyNnww&ixlib=rb-4.1.0&q=85"
+    }
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Every interactive element MUST include a data-testid attribute in kebab-case",
+    "Never use complete transparent backgrounds for headers or sticky elements",
+    "Maintain high contrast compliant with WCAG AA/APCA standards",
+    "Use generous spacing (p-6, p-8, gap-6) for clean UI breathing room",
+    "Ensure Asia/Kolkata timezone is accurately utilized for daily punch validation"
+  ]
+}
