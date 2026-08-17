@@ -1,59 +1,88 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 
 export type Session = 'morning' | 'evening';
 export type Punch = { id: string; date: string; session: Session; punchedAt: string };
-export type SavePunchResult = { punch: Punch; synced: boolean; error?: string };
 export type Settings = { morningTime: string; eveningTime: string; notifications: boolean };
 
-const PUNCHES_KEY = 'pulse.punches.v1';
-const SETTINGS_KEY = 'pulse.settings.v1';
+const DEMO_ID = 'personal-demo';
+const DEFAULT_SETTINGS: Settings = { morningTime: '09:30', eveningTime: '19:00', notifications: true };
 
-async function localPunches() { return JSON.parse((await AsyncStorage.getItem(PUNCHES_KEY)) || '[]') as Punch[]; }
-function mapRemote(row: any): Punch { return { id: row.id, date: row.punch_date, session: row.session, punchedAt: row.punched_at }; }
-
-export async function getPunches() {
-  const local = await localPunches();
-  try {
-    if (!supabase) throw new Error('offline');
-    const { data, error } = await supabase.from('punch_records').select('id,punch_date,session,punched_at').order('punched_at', { ascending: false });
-    if (error) throw error;
-    const remote = (data || []).map(mapRemote);
-    const keys = new Set(remote.map((item) => `${item.date}-${item.session}`));
-    return [...remote, ...local.filter((item) => !keys.has(`${item.date}-${item.session}`))];
-  } catch { return local; }
+function requireClient() {
+  if (!supabase) throw new Error('Supabase is not configured. Add your project URL and anon key.');
+  return supabase;
 }
 
-export async function savePunch(session: Session, date: string, punchedAt: string): Promise<SavePunchResult> {
-  const current = await localPunches();
-  const existing = current.find((p) => p.date === date && p.session === session);
-  const punch: Punch = { id: existing?.id || `${date}-${session}`, date, session, punchedAt };
-  const next = [punch, ...current.filter((p) => p.id !== punch.id)];
-  await AsyncStorage.setItem(PUNCHES_KEY, JSON.stringify(next));
-  try {
-    if (!supabase) throw new Error('offline');
-    const { error } = await supabase.from('punch_records').upsert({ demo_id: 'personal-demo', punch_date: date, session, punched_at: punchedAt }, { onConflict: 'demo_id,punch_date,session' });
-    if (error) throw error;
-    return { punch, synced: true };
-  } catch (error: any) { return { punch, synced: false, error: error?.message || 'Supabase sync unavailable' }; }
+function mapRemote(row: any): Punch {
+  return { id: row.id, date: row.punch_date, session: row.session, punchedAt: row.punched_at };
 }
 
-export async function deletePunch(item: Punch) {
-  await AsyncStorage.setItem(PUNCHES_KEY, JSON.stringify((await localPunches()).filter((p) => p.id !== item.id && !(p.date === item.date && p.session === item.session))));
-  if (!supabase) return false;
-  try {
-    const { error } = await supabase.from('punch_records').delete().eq('demo_id', 'personal-demo').eq('punch_date', item.date).eq('session', item.session);
-    return !error;
-  } catch { return false; }
+// ---- Punches (Supabase only) ----
+export async function getPunches(): Promise<Punch[]> {
+  const client = requireClient();
+  const { data, error } = await client
+    .from('punch_records')
+    .select('id,punch_date,session,punched_at')
+    .eq('demo_id', DEMO_ID)
+    .order('punch_date', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data || []).map(mapRemote);
 }
 
+export async function savePunch(session: Session, date: string, punchedAt: string): Promise<Punch> {
+  const client = requireClient();
+  const { data, error } = await client
+    .from('punch_records')
+    .upsert({ demo_id: DEMO_ID, punch_date: date, session, punched_at: punchedAt }, { onConflict: 'demo_id,punch_date,session' })
+    .select('id,punch_date,session,punched_at')
+    .single();
+  if (error) throw new Error(error.message);
+  return mapRemote(data);
+}
+
+export async function deletePunch(item: Punch): Promise<void> {
+  const client = requireClient();
+  const { error } = await client
+    .from('punch_records')
+    .delete()
+    .eq('demo_id', DEMO_ID)
+    .eq('punch_date', item.date)
+    .eq('session', item.session);
+  if (error) throw new Error(error.message);
+}
+
+// ---- Reminder settings (Supabase only) ----
 export async function getSettings(): Promise<Settings> {
-  const saved = await AsyncStorage.getItem(SETTINGS_KEY);
-  return saved ? JSON.parse(saved) : { morningTime: '09:30', eveningTime: '19:00', notifications: true };
+  if (!supabase) return DEFAULT_SETTINGS;
+  const { data, error } = await supabase
+    .from('reminder_settings')
+    .select('morning_time,evening_time,notifications')
+    .eq('demo_id', DEMO_ID)
+    .maybeSingle();
+  if (error || !data) return DEFAULT_SETTINGS;
+  return {
+    morningTime: (data.morning_time || DEFAULT_SETTINGS.morningTime).slice(0, 5),
+    eveningTime: (data.evening_time || DEFAULT_SETTINGS.eveningTime).slice(0, 5),
+    notifications: !!data.notifications,
+  };
 }
-export async function saveSettings(settings: Settings) {
+
+export async function saveSettings(settings: Settings): Promise<Settings> {
+  const client = requireClient();
   const valid = (value: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
-  const safe = { ...settings, morningTime: valid(settings.morningTime) ? settings.morningTime : '09:30', eveningTime: valid(settings.eveningTime) ? settings.eveningTime : '19:00' };
-  await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(safe));
+  const safe: Settings = {
+    morningTime: valid(settings.morningTime) ? settings.morningTime : DEFAULT_SETTINGS.morningTime,
+    eveningTime: valid(settings.eveningTime) ? settings.eveningTime : DEFAULT_SETTINGS.eveningTime,
+    notifications: settings.notifications,
+  };
+  const { error } = await client
+    .from('reminder_settings')
+    .upsert({
+      demo_id: DEMO_ID,
+      morning_time: safe.morningTime,
+      evening_time: safe.eveningTime,
+      notifications: safe.notifications,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'demo_id' });
+  if (error) throw new Error(error.message);
   return safe;
 }
