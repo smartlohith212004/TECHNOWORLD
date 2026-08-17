@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 
 export type Session = 'morning' | 'evening';
 export type Punch = { id: string; date: string; session: Session; punchedAt: string };
+export type SavePunchResult = { punch: Punch; synced: boolean; error?: string };
 export type Settings = { morningTime: string; eveningTime: string; notifications: boolean };
 
 const PUNCHES_KEY = 'pulse.punches.v1';
@@ -23,7 +24,7 @@ export async function getPunches() {
   } catch { return local; }
 }
 
-export async function savePunch(session: Session, date: string, punchedAt: string) {
+export async function savePunch(session: Session, date: string, punchedAt: string): Promise<SavePunchResult> {
   const current = await localPunches();
   const existing = current.find((p) => p.date === date && p.session === session);
   const punch: Punch = { id: existing?.id || `${date}-${session}`, date, session, punchedAt };
@@ -31,15 +32,19 @@ export async function savePunch(session: Session, date: string, punchedAt: strin
   await AsyncStorage.setItem(PUNCHES_KEY, JSON.stringify(next));
   try {
     if (!supabase) throw new Error('offline');
-    if (existing) await supabase.from('punch_records').update({ punched_at: punchedAt }).eq('id', existing.id);
-    else await supabase.from('punch_records').insert({ demo_id: 'personal-demo', punch_date: date, session, punched_at: punchedAt });
-  } catch { /* local persistence keeps the flow usable until schema is present */ }
-  return punch;
+    const { error } = await supabase.from('punch_records').upsert({ demo_id: 'personal-demo', punch_date: date, session, punched_at: punchedAt }, { onConflict: 'demo_id,punch_date,session' });
+    if (error) throw error;
+    return { punch, synced: true };
+  } catch (error: any) { return { punch, synced: false, error: error?.message || 'Supabase sync unavailable' }; }
 }
 
-export async function deletePunch(id: string) {
-  await AsyncStorage.setItem(PUNCHES_KEY, JSON.stringify((await localPunches()).filter((p) => p.id !== id)));
-  try { if (supabase) await supabase.from('punch_records').delete().eq('id', id); } catch { /* offline */ }
+export async function deletePunch(item: Punch) {
+  await AsyncStorage.setItem(PUNCHES_KEY, JSON.stringify((await localPunches()).filter((p) => p.id !== item.id && !(p.date === item.date && p.session === item.session))));
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('punch_records').delete().eq('demo_id', 'personal-demo').eq('punch_date', item.date).eq('session', item.session);
+    return !error;
+  } catch { return false; }
 }
 
 export async function getSettings(): Promise<Settings> {

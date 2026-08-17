@@ -27,6 +27,7 @@ Build a premium, low-friction attendance companion that makes it immediately obv
 - Added edit time modal, delete confirmation, history view with YYYY-MM filter, settings modal, reminder preferences, and notification toggle.
 - Replaced the separate history entry list with a month calendar view, previous/next month navigation, and morning/evening status dots per day.
 - Fixed calendar month parsing so Asia/Kolkata dates no longer shift backward into the previous UTC month; today’s punch dots now map to the correct date.
+- Replaced web-unreliable delete alerts with an explicit confirmation modal; punch saves now await Supabase upsert and show synced-versus-local status, while deletes clear the UI immediately and report remote failures.
 - Added SQL schema with unique session constraint and RLS policy for the selected no-auth personal demo mode.
 - Verified Expo preview load, morning punch, history, settings, notification selector, and punch persistence after reload; JavaScript lint is clean.
 
