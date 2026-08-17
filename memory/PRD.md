@@ -39,7 +39,7 @@ Build a premium, low-friction attendance companion that makes it immediately obv
 5. P2: Add dark mode and export/shareable monthly attendance reports.
 
 ## P0/P1/P2 remaining
-- P0: Supabase schema deployment/verification.
+- P0: Supabase schema deployment/verification — completed and verified with a live punch sync on 2026-08-17.
 - P1: Authenticated ownership, production RLS, native scheduled notifications.
 - P2: Advanced analytics, theme polish, exports.
 
