@@ -62,9 +62,9 @@ function PunchCard({ session, item, onPunch, onEdit, onDelete }: { session: Sess
 function Stat({ value, label, icon, color }: { value: string; label: string; icon: any; color: string }) { return <View style={styles.stat}><Ionicons name={icon} size={18} color={color} /><Text style={styles.statValue}>{value}</Text><Text style={styles.statLabel}>{label}</Text></View>; }
 
 function CalendarHistory({ punches, month, onMonthChange }: { punches: Punch[]; month: string; onMonthChange: (month: string) => void }) {
-  const monthDate = new Date(`${month}T00:00:00+05:30`);
-  const year = monthDate.getUTCFullYear();
-  const monthIndex = monthDate.getUTCMonth();
+  const year = Number(month.slice(0, 4));
+  const monthIndex = Number(month.slice(5, 7)) - 1;
+  const monthDate = new Date(Date.UTC(year, monthIndex, 15));
   const days = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
   const firstDay = new Date(Date.UTC(year, monthIndex, 1)).getUTCDay();
   const monthName = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: INDIA }).format(monthDate);
