@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Pulse · Attendance</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕘</text></svg>" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    :root{
+      --ink:#0F172A; --muted:#64748B; --blue:#2563EB; --green:#16A34A; --red:#DC2626;
+      --bg:#F8FAFC; --line:#E2E8F0; --white:#FFFFFF; --amber:#CA8A04;
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+    html,body{margin:0; padding:0;}
+    body{background:var(--bg); color:var(--ink);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;}
+    #root{max-width:760px; margin:0 auto; padding:20px 20px 40px;}
+    .row{display:flex; align-items:center;}
+    .between{justify-content:space-between;}
+    .eyebrow{font-size:11px; letter-spacing:1.6px; color:var(--blue); font-weight:800; margin:0;}
+    .brand{font-size:32px; line-height:40px; font-weight:800; letter-spacing:-1px; margin:2px 0 0;}
+    .icon-btn{width:46px;height:46px;border-radius:23px;background:var(--white);border:1px solid var(--line);
+      display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;}
+    .date-row{display:flex;align-items:center;gap:8px;margin:14px 0 12px;}
+    .date-text{font-weight:600;font-size:15px;}
+    .tz{background:#DBEAFE;color:var(--blue);font-size:10px;font-weight:800;padding:3px 7px;border-radius:5px;}
+    .banner{display:flex;align-items:center;gap:8px;padding:11px;border-radius:12px;margin-bottom:12px;font-size:13px;font-weight:700;}
+    .banner.ok{background:#F0FDF4;color:var(--green);}
+    .banner.err{background:#FEF2F2;color:var(--red);}
+    .hero{background:var(--ink);border-radius:24px;padding:24px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+    .hero-label{color:#93C5FD;font-size:11px;letter-spacing:1.4px;font-weight:800;margin:0 0 8px;}
+    .hero-title{color:#fff;font-size:31px;font-weight:800;margin:0 0 5px;}
+    .hero-copy{color:#CBD5E1;font-size:14px;max-width:245px;line-height:20px;margin:0;}
+    .ring{width:86px;height:86px;border-radius:43px;border:5px solid var(--blue);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:0 0 auto;}
+    .ring-val{color:#fff;font-size:22px;font-weight:800;}
+    .ring-lbl{color:#94A3B8;font-size:9px;font-weight:800;letter-spacing:1px;}
+    .reminder{display:flex;align-items:center;gap:9px;padding:14px;border-radius:14px;background:#FEF3C7;color:#92400E;font-weight:700;font-size:13px;margin-bottom:25px;}
+    .sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+    .sec-title{font-size:20px;font-weight:800;margin:0;}
+    .sec-hint{color:var(--muted);font-size:10px;letter-spacing:1px;font-weight:800;}
+    .card{background:var(--white);border:1px solid var(--line);border-radius:20px;padding:17px;margin-bottom:12px;}
+    .card.done{border-color:#BBF7D0;}
+    .card-top{display:flex;align-items:center;gap:12px;}
+    .sess-icon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex:0 0 auto;}
+    .card-title{font-size:17px;font-weight:800;text-transform:capitalize;margin:0;}
+    .card-sub{color:var(--muted);font-size:13px;margin:3px 0 0;}
+    .pill{display:flex;align-items:center;gap:5px;flex:0 0 auto;}
+    .dot{width:7px;height:7px;border-radius:4px;}
+    .pill-text{font-size:11px;font-weight:800;}
+    .punch-btn{background:var(--blue);color:#fff;min-height:48px;border:none;border-radius:13px;margin-top:16px;width:100%;
+      display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:800;cursor:pointer;}
+    .punch-btn:disabled{opacity:.6;cursor:default;}
+    .action-row{border-top:1px solid var(--line);margin-top:14px;padding-top:12px;display:flex;align-items:center;justify-content:space-between;}
+    .exact{color:var(--muted);font-size:11px;}
+    .actions{display:flex;gap:17px;}
+    .link{color:var(--blue);font-size:13px;font-weight:800;cursor:pointer;background:none;border:none;padding:6px 0;}
+    .link.red{color:var(--red);}
+    .stats{display:flex;gap:10px;margin:12px 0;}
+    .stat{flex:1;background:var(--white);border:1px solid var(--line);border-radius:16px;padding:13px;min-height:105px;font-size:18px;}
+    .stat-val{font-size:24px;font-weight:800;margin:8px 0 2px;}
+    .stat-lbl{color:var(--muted);font-size:11px;line-height:15px;}
+    .hist-btn{background:#EFF6FF;color:var(--blue);border:none;border-radius:14px;min-height:50px;padding:0 16px;width:100%;
+      display:flex;align-items:center;justify-content:space-between;font-weight:800;font-size:14px;margin-top:6px;cursor:pointer;}
+    .history{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:10px;}
+    .month-nav{display:flex;align-items:center;justify-content:space-between;background:#F8FAFC;border-radius:12px;padding:4px;margin-top:14px;}
+    .month-arrow{width:40px;height:40px;border-radius:10px;background:var(--white);border:1px solid var(--line);
+      display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;font-weight:800;}
+    .month-picker{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;margin:0 8px;padding:9px;
+      background:none;border:none;font-size:15px;font-weight:800;color:var(--ink);cursor:pointer;}
+    .week-head{display:flex;margin:12px 0 6px;}
+    .week-day{flex:1;text-align:center;color:var(--muted);font-size:11px;font-weight:800;}
+    .cal-grid{display:flex;flex-wrap:wrap;}
+    .cal-cell{width:14.285%;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      border-radius:10px;margin-bottom:2px;cursor:pointer;background:none;border:2px solid transparent;padding:0;}
+    .cal-cell.complete{background:#F0FDF4;}
+    .cal-cell.selected{border-color:var(--blue);}
+    .cal-cell.blank{cursor:default;}
+    .cal-day{font-size:13px;font-weight:700;}
+    .cal-dots{display:flex;gap:3px;margin-top:6px;}
+    .cal-dot{width:6px;height:6px;border-radius:3px;}
+    .legend{display:flex;flex-wrap:wrap;align-items:center;gap:12px;border-top:1px solid #F1F5F9;margin-top:10px;padding-top:12px;}
+    .legend-item{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:11px;}
+    .legend-note{color:var(--muted);font-size:11px;width:100%;}
+    .day-detail{background:#EFF6FF;border-radius:14px;padding:14px;margin-top:12px;}
+    .day-detail h4{margin:0 0 6px;font-size:15px;}
+    .day-detail p{margin:0 0 4px;color:var(--muted);font-size:13px;}
+    .day-detail b{color:var(--ink);}
+    .footer{text-align:center;color:#94A3B8;font-size:12px;margin-top:28px;}
+    .shade{position:fixed;inset:0;background:rgba(15,23,42,.42);display:flex;align-items:flex-end;justify-content:center;z-index:50;}
+    .sheet{background:var(--white);border-radius:26px 26px 0 0;padding:24px;width:100%;max-width:760px;}
+    .sheet.center{border-radius:26px;margin:auto;}
+    .sheet h3{font-size:22px;font-weight:800;margin:0;}
+    .sheet .copy{color:var(--muted);font-size:14px;line-height:20px;margin:8px 0 12px;}
+    .field-label{font-weight:800;font-size:13px;margin:10px 0 6px;}
+    input.time{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;color:var(--ink);}
+    .switch-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;}
+    .save-btn{width:100%;min-height:50px;border:none;border-radius:13px;background:var(--blue);color:#fff;font-weight:800;font-size:15px;margin-top:12px;cursor:pointer;}
+    .save-btn:disabled{opacity:.6;}
+    .del-btn{background:var(--red);}
+    .cancel-btn{width:100%;min-height:44px;background:none;border:none;color:var(--muted);font-weight:700;margin-top:6px;cursor:pointer;}
+    .picker-label{color:var(--muted);font-size:11px;font-weight:800;letter-spacing:1.2px;margin:14px 0 8px;}
+    .year-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
+    .chip{padding:10px 16px;border-radius:12px;background:#F1F5F9;font-weight:800;font-size:14px;border:none;cursor:pointer;flex:0 0 auto;}
+    .chip.active{background:var(--ink);color:#fff;}
+    .month-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .mchip{min-height:46px;border-radius:12px;background:#F1F5F9;font-weight:800;font-size:14px;border:none;cursor:pointer;}
+    .mchip.active{background:var(--blue);color:#fff;}
+    .loader{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:14px;color:var(--muted);}
+    .spin{width:34px;height:34px;border:4px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin 1s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .toggle{width:48px;height:28px;border-radius:14px;background:var(--line);position:relative;cursor:pointer;transition:.2s;border:none;flex:0 0 auto;}
+    .toggle.on{background:var(--blue);}
+    .toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;transition:.2s;}
+    .toggle.on::after{left:23px;}
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="loader"><div class="spin"></div><span>Loading your attendance</span></div>
+  </div>
+
+  <script>
+  (function(){
+    "use strict";
+
+    // ---- Supabase config (publishable anon key — safe for the browser) ----
+    var SUPABASE_URL = "https://chrjayettiysxxkexati.supabase.co";
+    var SUPABASE_ANON_KEY = "sb_publishable_Zcq9gI0t-1pPCMniN1XKIQ_oIPQSUsG";
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var DEMO_ID = "personal-demo";
+
+    // ---- IST helpers ----
+    var INDIA = "Asia/Kolkata";
+    var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    var MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    function todayIST(){ return new Intl.DateTimeFormat("en-CA",{timeZone:INDIA,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()); }
+    function fmtDate(d){ return new Intl.DateTimeFormat("en-IN",{timeZone:INDIA,weekday:"long",month:"long",day:"numeric"}).format(new Date(d+"T00:00:00+05:30")); }
+    function fmtTime(iso){ return new Intl.DateTimeFormat("en-IN",{timeZone:INDIA,hour:"numeric",minute:"2-digit"}).format(new Date(iso)); }
+    function time24(iso){ return new Intl.DateTimeFormat("en-GB",{timeZone:INDIA,hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(iso)); }
+    function shortDate(d){ return new Intl.DateTimeFormat("en-IN",{timeZone:INDIA,month:"short",day:"numeric"}).format(new Date(d+"T00:00:00+05:30")); }
+    function pad(n){ return String(n).padStart(2,"0"); }
+    function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+
+    function mapRow(r){ return { id:r.id, date:r.punch_date, session:r.session, punchedAt:r.punched_at }; }
+
+    // ---- Supabase data layer ----
+    async function getPunches(){
+      var res = await sb.from("punch_records").select("id,punch_date,session,punched_at").eq("demo_id",DEMO_ID).order("punch_date",{ascending:false});
+      if(res.error) throw new Error(res.error.message);
+      return (res.data||[]).map(mapRow);
+    }
+    async function savePunch(session,date,punchedAt){
+      var res = await sb.from("punch_records").upsert({demo_id:DEMO_ID,punch_date:date,session:session,punched_at:punchedAt},{onConflict:"demo_id,punch_date,session"}).select("id,punch_date,session,punched_at").single();
+      if(res.error) throw new Error(res.error.message);
+      return mapRow(res.data);
+    }
+    async function deletePunch(item){
+      var res = await sb.from("punch_records").delete().eq("demo_id",DEMO_ID).eq("punch_date",item.date).eq("session",item.session);
+      if(res.error) throw new Error(res.error.message);
+    }
+    var DEFAULTS = { morningTime:"09:30", eveningTime:"19:00", notifications:true };
+    async function getSettings(){
+      var res = await sb.from("reminder_settings").select("morning_time,evening_time,notifications").eq("demo_id",DEMO_ID).maybeSingle();
+      if(res.error || !res.data) return Object.assign({},DEFAULTS);
+      return { morningTime:(res.data.morning_time||DEFAULTS.morningTime).slice(0,5),
+               eveningTime:(res.data.evening_time||DEFAULTS.eveningTime).slice(0,5),
+               notifications:!!res.data.notifications };
+    }
+    async function saveSettings(s){
+      var ok = function(v){ return /^([01]\d|2[0-3]):[0-5]\d$/.test(v); };
+      var safe = { morningTime: ok(s.morningTime)?s.morningTime:DEFAULTS.morningTime,
+                   eveningTime: ok(s.eveningTime)?s.eveningTime:DEFAULTS.eveningTime,
+                   notifications: s.notifications };
+      var res = await sb.from("reminder_settings").upsert({demo_id:DEMO_ID,morning_time:safe.morningTime,evening_time:safe.eveningTime,notifications:safe.notifications,updated_at:new Date().toISOString()},{onConflict:"demo_id"});
+      if(res.error) throw new Error(res.error.message);
+      return safe;
+    }
+
+    // ---- state ----
+    var today = todayIST();
+    var state = {
+      punches:[], settings:Object.assign({},DEFAULTS), loading:true, busy:false,
+      banner:null, history:false,
+      calMonth: today.slice(0,7)+"-01", calSelected:null, pickerOpen:false, pYear: +today.slice(0,4),
+      modal:null, editing:null, deleting:null
+    };
+    var root = document.getElementById("root");
+    function set(patch){ Object.assign(state,patch); render(); }
+
+    function findPunch(date,session){ return state.punches.find(function(p){return p.date===date && p.session===session;}); }
+    function upsertLocal(saved){ state.punches = [saved].concat(state.punches.filter(function(p){return !(p.date===saved.date && p.session===saved.session);})); }
+    function rows(){
+      var dates = Array.from(new Set(state.punches.map(function(p){return p.date;}))).sort().reverse();
+      return dates.map(function(d){return {date:d, morning:findPunch(d,"morning"), evening:findPunch(d,"evening")};});
+    }
+
+    // ---- views ----
+    function punchCardHTML(session){
+      var item = findPunch(today,session);
+      var isM = session==="morning";
+      var top =
+        '<div class="card-top">'+
+          '<div class="sess-icon" style="background:'+(item?"#DCFCE7":"#EFF6FF")+'">'+(isM?"☀️":"🌙")+'</div>'+
+          '<div style="flex:1">'+
+            '<p class="card-title">'+(isM?"Morning punch":"Evening punch")+'</p>'+
+            '<p class="card-sub">'+(item?("Recorded at "+fmtTime(item.punchedAt)):(isM?"Start your day accounted for":"Close out your day accounted for"))+'</p>'+
+          '</div>'+
+          '<div class="pill"><span class="dot" style="background:'+(item?"var(--green)":"#CBD5E1")+'"></span>'+
+          '<span class="pill-text" style="color:'+(item?"var(--green)":"var(--muted)")+'">'+(item?"Punched":"Not punched")+'</span></div>'+
+        '</div>';
+      var body = item
+        ? '<div class="action-row"><span class="exact">'+fmtDate(item.date)+' · '+fmtTime(item.punchedAt)+'</span>'+
+          '<div class="actions">'+
+            '<button class="link" data-action="edit" data-session="'+session+'">Edit</button>'+
+            '<button class="link red" data-action="delete" data-session="'+session+'">Delete</button>'+
+          '</div></div>'
+        : '<button class="punch-btn" '+(state.busy?"disabled":"")+' data-action="punch" data-session="'+session+'">👆 Mark as punched</button>';
+      return '<div class="card'+(item?" done":"")+'">'+top+body+'</div>';
+    }
+
+    function calendarHTML(){
+      var y = +state.calMonth.slice(0,4);
+      var mi = +state.calMonth.slice(5,7)-1;
+      var days = new Date(Date.UTC(y,mi+1,0)).getUTCDate();
+      var firstDay = new Date(Date.UTC(y,mi,1)).getUTCDay();
+      var cells = "";
+      for(var b=0;b<firstDay;b++) cells += '<div class="cal-cell blank"></div>';
+      for(var d=1;d<=days;d++){
+        var date = y+"-"+pad(mi+1)+"-"+pad(d);
+        var m = findPunch(date,"morning"), e = findPunch(date,"evening");
+        cells += '<button class="cal-cell'+((m&&e)?" complete":"")+(state.calSelected===date?" selected":"")+'" data-action="select-day" data-date="'+date+'">'+
+          '<span class="cal-day">'+d+'</span>'+
+          '<span class="cal-dots"><span class="cal-dot" style="background:'+(m?"var(--green)":"#CBD5E1")+'"></span>'+
+          '<span class="cal-dot" style="background:'+(e?"var(--blue)":"#CBD5E1")+'"></span></span>'+
+        '</button>';
+      }
+      var detail = "";
+      if(state.calSelected){
+        var sm = findPunch(state.calSelected,"morning"), se = findPunch(state.calSelected,"evening");
+        detail = '<div class="day-detail"><h4>'+fmtDate(state.calSelected)+'</h4>'+
+          '<p><b>Morning</b>&nbsp;&nbsp;'+(sm?fmtTime(sm.punchedAt):"Not punched")+'</p>'+
+          '<p><b>Evening</b>&nbsp;&nbsp;'+(se?fmtTime(se.punchedAt):"Not punched")+'</p></div>';
+      }
+      var week = ["S","M","T","W","T","F","S"].map(function(x){return '<span class="week-day">'+x+'</span>';}).join("");
+      return '<div class="history">'+
+        '<p class="sec-title">Punch history</p>'+
+        '<div class="month-nav">'+
+          '<button class="month-arrow" data-action="prev-month">‹</button>'+
+          '<button class="month-picker" data-action="open-picker">'+MONTHS[mi]+' '+y+' <span style="color:var(--blue)">▾</span></button>'+
+          '<button class="month-arrow" data-action="next-month">›</button>'+
+        '</div>'+
+        '<div class="week-head">'+week+'</div>'+
+        '<div class="cal-grid">'+cells+'</div>'+
+        '<div class="legend">'+
+          '<span class="legend-item"><span class="cal-dot" style="background:var(--green)"></span>Morning</span>'+
+          '<span class="legend-item"><span class="cal-dot" style="background:var(--blue)"></span>Evening</span>'+
+          '<span class="legend-note">Tap any day to see exact punch times.</span>'+
+        '</div>'+ detail +
+      '</div>';
+    }
+
+    function pickerModalHTML(){
+      var y = +state.calMonth.slice(0,4);
+      var mi = +state.calMonth.slice(5,7)-1;
+      var nowY = new Date().getFullYear();
+      var years = "";
+      for(var i=nowY-5;i<=nowY+2;i++) years += '<button class="chip'+(state.pYear===i?" active":"")+'" data-action="pick-year" data-year="'+i+'">'+i+'</button>';
+      var months = MONTHS_SHORT.map(function(l,idx){
+        var active = (state.pYear===y && idx===mi);
+        return '<button class="mchip'+(active?" active":"")+'" data-action="pick-month" data-month="'+idx+'">'+l+'</button>';
+      }).join("");
+      return '<div class="shade" data-action="close-modal"><div class="sheet" data-stop>'+
+        '<div class="row between"><h3>Jump to month</h3><button class="icon-btn" data-action="close-modal">✕</button></div>'+
+        '<p class="picker-label">YEAR</p><div class="year-row">'+years+'</div>'+
+        '<p class="picker-label">MONTH</p><div class="month-grid">'+months+'</div>'+
+      '</div></div>';
+    }
+
+    function settingsModalHTML(){
+      var s = state.settings;
+      return '<div class="shade" data-action="close-modal"><div class="sheet" data-stop>'+
+        '<div class="row between"><h3>Reminder settings</h3><button class="icon-btn" data-action="close-modal">✕</button></div>'+
+        '<p class="copy">Choose when Pulse should flag an unrecorded punch. Times use IST and are saved to Supabase.</p>'+
+        '<p class="field-label">Morning reminder</p><input class="time" id="m-time" value="'+esc(s.morningTime)+'" placeholder="09:30" />'+
+        '<p class="field-label">Evening reminder</p><input class="time" id="e-time" value="'+esc(s.eveningTime)+'" placeholder="19:00" />'+
+        '<div class="switch-row"><span style="font-weight:700">Browser notifications</span>'+
+          '<button class="toggle'+(s.notifications?" on":"")+'" id="notif" data-action="toggle-notif"></button></div>'+
+        '<button class="save-btn" '+(state.busy?"disabled":"")+' data-action="save-settings">'+(state.busy?"Saving…":"Save preferences")+'</button>'+
+      '</div></div>';
+    }
+
+    function editModalHTML(){
+      var ed = state.editing;
+      return '<div class="shade" data-action="close-modal"><div class="sheet center" data-stop>'+
+        '<h3>Edit '+ed.session+' punch</h3><p class="copy">Set the exact time in 24-hour format.</p>'+
+        '<input class="time" id="edit-time" value="'+esc(time24(ed.punchedAt))+'" placeholder="08:42" />'+
+        '<button class="save-btn" '+(state.busy?"disabled":"")+' data-action="save-edit">'+(state.busy?"Saving…":"Save time")+'</button>'+
+        '<button class="cancel-btn" data-action="close-modal">Cancel</button>'+
+      '</div></div>';
+    }
+
+    function deleteModalHTML(){
+      var dl = state.deleting;
+      return '<div class="shade" data-action="close-modal"><div class="sheet center" data-stop>'+
+        '<h3>Delete punch?</h3><p class="copy">Remove the '+dl.session+' entry for '+shortDate(dl.date)+'? This permanently deletes it from Supabase.</p>'+
+        '<button class="save-btn del-btn" '+(state.busy?"disabled":"")+' data-action="confirm-delete">'+(state.busy?"Deleting…":"Delete entry")+'</button>'+
+        '<button class="cancel-btn" data-action="close-modal">Keep entry</button>'+
+      '</div></div>';
+    }
+
+    function render(){
+      if(state.loading){ root.innerHTML = '<div class="loader"><div class="spin"></div><span>Loading your attendance</span></div>'; return; }
+      var m = findPunch(today,"morning"), e = findPunch(today,"evening");
+      var rw = rows();
+      var completeDays = rw.filter(function(r){return r.morning && r.evening;}).length;
+      var missed = rw.filter(function(r){return !r.morning || !r.evening;}).length;
+      var pct = rw.length ? Math.round(rw.filter(function(r){return r.morning && r.evening;}).length / rw.length * 100) : 0;
+      var readiness = (m&&e)?"100":((m||e)?"50":"0");
+
+      var html =
+        '<div class="row between"><div><p class="eyebrow">PULSE / ATTENDANCE</p><h1 class="brand">Good day.</h1></div>'+
+          '<button class="icon-btn" data-action="open-settings">⚙️</button></div>'+
+        '<div class="date-row">📅 <span class="date-text">'+fmtDate(today)+'</span><span class="tz">IST</span></div>'+
+        (state.banner ? '<div class="banner '+state.banner.type+'">'+(state.banner.type==="ok"?"✅":"⚠️")+' '+esc(state.banner.text)+'</div>' : '')+
+        '<div class="hero"><div>'+
+          '<p class="hero-label">TODAY\'S READINESS</p>'+
+          '<p class="hero-title">'+((m&&e)?"All clear.":"Stay on track.")+'</p>'+
+          '<p class="hero-copy">'+((m&&e)?"Both biometric punches are recorded.":"Two quick taps, and your day is accounted for.")+'</p>'+
+        '</div><div class="ring"><span class="ring-val">'+readiness+'%</span><span class="ring-lbl">TODAY</span></div></div>'+
+        ((!m||!e) ? '<div class="reminder">🔔 '+(!m?("Morning punch not recorded · after "+esc(state.settings.morningTime)):("Evening punch not recorded · after "+esc(state.settings.eveningTime)))+'</div>' : '')+
+        '<div class="sec-head"><p class="sec-title">Today\'s punches</p><span class="sec-hint">ASIA/KOLKATA</span></div>'+
+        punchCardHTML("morning")+ punchCardHTML("evening")+
+        '<div class="stats">'+
+          '<div class="stat">✔️<div class="stat-val">'+completeDays+'</div><div class="stat-lbl">Complete days</div></div>'+
+          '<div class="stat">⚠️<div class="stat-val">'+missed+'</div><div class="stat-lbl">Days to review</div></div>'+
+          '<div class="stat">📈<div class="stat-val">'+pct+'%</div><div class="stat-lbl">Attendance rate</div></div>'+
+        '</div>'+
+        '<button class="hist-btn" data-action="toggle-history">'+(state.history?"Hide punch history":"View punch history")+' <span>'+(state.history?"▲":"›")+'</span></button>'+
+        (state.history ? calendarHTML() : '')+
+        '<p class="footer">Your attendance, made effortless.</p>';
+
+      if(state.pickerOpen) html += pickerModalHTML();
+      if(state.modal==="settings") html += settingsModalHTML();
+      if(state.modal==="edit") html += editModalHTML();
+      if(state.modal==="delete") html += deleteModalHTML();
+
+      root.innerHTML = html;
+    }
+
+    // ---- actions ----
+    async function doPunch(session){
+      set({busy:true});
+      try{ var saved = await savePunch(session,today,new Date().toISOString()); upsertLocal(saved); state.banner={type:"ok",text:"Punch saved to Supabase."}; }
+      catch(err){ state.banner={type:"err",text:err.message}; }
+      set({busy:false});
+    }
+    async function doDelete(){
+      var t = state.deleting; if(!t) return;
+      set({busy:true});
+      try{ await deletePunch(t); state.punches = state.punches.filter(function(p){return !(p.date===t.date && p.session===t.session);}); state.banner={type:"ok",text:"Punch deleted from Supabase."}; state.deleting=null; state.modal=null; }
+      catch(err){ state.banner={type:"err",text:err.message}; }
+      set({busy:false});
+    }
+    async function doEdit(){
+      var ed = state.editing; if(!ed) return;
+      var v = (document.getElementById("edit-time")||{}).value || "";
+      if(!/^\d{1,2}:\d{2}$/.test(v)){ set({banner:{type:"err",text:"Enter time as HH:MM (24-hour)."}}); return; }
+      var parts = v.split(":"); var iso = new Date(ed.date+"T"+pad(+parts[0])+":"+pad(+parts[1])+":00+05:30").toISOString();
+      set({busy:true});
+      try{ var saved = await savePunch(ed.session,ed.date,iso); upsertLocal(saved); state.banner={type:"ok",text:"Punch updated in Supabase."}; state.editing=null; state.modal=null; }
+      catch(err){ state.banner={type:"err",text:err.message}; }
+      set({busy:false});
+    }
+    async function doSaveSettings(){
+      var mv = (document.getElementById("m-time")||{}).value || DEFAULTS.morningTime;
+      var ev = (document.getElementById("e-time")||{}).value || DEFAULTS.eveningTime;
+      var notif = document.getElementById("notif") && document.getElementById("notif").classList.contains("on");
+      set({busy:true});
+      try{
+        if(notif && "Notification" in window && Notification.permission==="default"){ await Notification.requestPermission(); }
+        var saved = await saveSettings({morningTime:mv,eveningTime:ev,notifications:!!notif});
+        state.settings = saved; state.banner={type:"ok",text:"Reminder settings saved to Supabase."}; state.modal=null;
+      }catch(err){ state.banner={type:"err",text:err.message}; }
+      set({busy:false});
+    }
+
+    // ---- event delegation ----
+    root.addEventListener("click", function(ev){
+      var el = ev.target.closest("[data-action]");
+      // toggle switch handled without full re-render to preserve typed inputs
+      if(el && el.getAttribute("data-action")==="toggle-notif"){ el.classList.toggle("on"); ev.stopPropagation(); return; }
+      if(!el){ return; }
+      var action = el.getAttribute("data-action");
+      switch(action){
+        case "open-settings": set({modal:"settings"}); break;
+        case "open-picker": set({pickerOpen:true, pYear:+state.calMonth.slice(0,4)}); break;
+        case "close-modal": set({modal:null, pickerOpen:false, editing:null, deleting:null}); break;
+        case "toggle-history": set({history:!state.history}); break;
+        case "punch": doPunch(el.getAttribute("data-session")); break;
+        case "edit": set({editing:findPunch(today,el.getAttribute("data-session")), modal:"edit"}); break;
+        case "delete": set({deleting:findPunch(today,el.getAttribute("data-session")), modal:"delete"}); break;
+        case "confirm-delete": doDelete(); break;
+        case "save-edit": doEdit(); break;
+        case "save-settings": doSaveSettings(); break;
+        case "select-day": set({calSelected:el.getAttribute("data-date")}); break;
+        case "prev-month": moveMonth(-1); break;
+        case "next-month": moveMonth(1); break;
+        case "pick-year": set({pYear:+el.getAttribute("data-year")}); break;
+        case "pick-month": pickMonth(+el.getAttribute("data-month")); break;
+      }
+    });
+
+    function moveMonth(delta){
+      var y = +state.calMonth.slice(0,4), mi = +state.calMonth.slice(5,7)-1;
+      var nx = new Date(Date.UTC(y,mi+delta,1));
+      set({calSelected:null, calMonth: nx.getUTCFullYear()+"-"+pad(nx.getUTCMonth()+1)+"-01"});
+    }
+    function pickMonth(idx){
+      set({calSelected:null, pickerOpen:false, calMonth: state.pYear+"-"+pad(idx+1)+"-01"});
+    }
+
+    // ---- init ----
+    (async function init(){
+      try{
+        var results = await Promise.all([getPunches(), getSettings()]);
+        state.punches = results[0]; state.settings = results[1];
+      }catch(err){
+        state.banner = {type:"err", text: err.message || "Could not load data from Supabase."};
+      }
+      set({loading:false});
+    })();
+  })();
+  </script>
+</body>
+</html>
