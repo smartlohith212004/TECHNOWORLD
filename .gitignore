@@ -81,3 +81,9 @@ memory/test_credentials.md
 # Mobile development
 android-sdk/biometric-punch-tracker.zip
 biometric-punch-tracker.zip
+.env
+.env.*
+*.env
+credentials.json
+*.key
+.credentials
